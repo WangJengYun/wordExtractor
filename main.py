@@ -9,21 +9,46 @@ segment_char = read_dictionary('./dict/segment_char.txt')
 doc = """
     監督學習是機器學習任務，它學習基於範例輸入-範例輸出組合，將輸入映射到輸出的函數。
     [1]它從標記的訓練數據（由一組訓練範例組成）中推斷出函數。
-    [2]在監督學習中，每個範例都是一對，由輸入對象（通常是矢量）和期望的輸出值（也稱為監督信號）組成。
+    [2]在監督學習中，每個範s例都是一對，由輸入對象（通常是矢量）和期望的輸出值（也稱為監督信號）組成。
     監督學習演算法分析訓練數據並產生一個推斷函數，該函數可用於映射新範例。
     最佳方案將使演算法能夠正確確定未見實例的類標籤。
     這就要求學習算法以“合理”的方式將訓練數據推廣到看不見的情況（見歸納偏差）。
 """
    
-kw_model = KeyWordExtractor(embedding_model = './model_files/ckip_bert-base-chinese', backend = 'flair',
-                            tokenizer_model ='./model_files/ckip_albert-tiny-chinese-ws/',
-                            stop_words = stop_words)
+kw_model = KeyWordExtractor(embedding_model = './model_files/ckip_bert-base-chinese', 
+                            tokenizer_model ='./model_files/ckip_bert-base-chinese_ws/',
+                            backend = 'flair',
+                            stop_words = stop_words,
+                            device = 'cuda')
    
-keywords = kw_model._extract_keywords_single_doc(doc, 
-                                                 keyphrase_ngram_range = (1, 3),
-                                                 segment_by_stop_words = True,
-                                                 top_n = 10,
-                                                 min_df = 2)
+keywords = kw_model.extract_keywords(doc, 
+                                    keyphrase_ngram_range = (1, 7),
+                                    segment_by_stop_words = True,
+                                    min_df = 2,
+                                    similarity_method = 'basic',
+                                    top_n = 10)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
