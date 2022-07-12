@@ -1,3 +1,4 @@
+from ast import Not
 import re 
 import numpy as np 
 from sklearn.feature_extraction.text import CountVectorizer
@@ -9,16 +10,24 @@ class Keyword_Candidates(object):
         keyphrase_ngram_range,
         segment_by_stop_words,
         excluding_stop_words,
-        min_df):
+        min_df,
+        pos_pattern):
         
         self.stop_words = stop_words
         self.keyphrase_ngram_range = keyphrase_ngram_range
         self.segment_by_stop_words = segment_by_stop_words
         self.excluding_stop_words = excluding_stop_words
         self.min_df = min_df
+        self.pos_pattern = pos_pattern
 
         if self.segment_by_stop_words or self.excluding_stop_words:
             assert stop_words is not None
+        
+        self.pos_pattern_dict = {}
+        if self.pos_pattern is not None:            
+            for n_gram, pos_tagger in self.pos_pattern:
+                self.pos_pattern_dict['gram_' + str(n_gram)] = pos_tagger
+
 
     def _segment_process(self, ws):
         
@@ -41,7 +50,8 @@ class Keyword_Candidates(object):
             input_stop_words = None 
 
         count = CountVectorizer(
-                ngram_range = self.keyphrase_ngram_range, stop_words = input_stop_words, min_df = self.min_df
+                ngram_range = self.keyphrase_ngram_range, stop_words = input_stop_words, min_df = self.min_df,
+                token_pattern = r"(?u)\b\w+\b"
                 ).fit(sentences)
 
         candidates = count.get_feature_names()
@@ -49,6 +59,7 @@ class Keyword_Candidates(object):
         return candidates
 
     def _get_candidates_positions(self, ws, candidates):
+        ws = [s.lower() for s in ws]
         ws = np.array(ws)
         words = []
         words_positions = []
@@ -64,13 +75,42 @@ class Keyword_Candidates(object):
                     positions = positions[ws[positions + n] == word_list[n]]
 
                 n += 1 
-            if len(positions)>= self.min_df:
+            if (len(positions)>= self.min_df) and len(phrase) > 1:
                 words_positions.append((positions.tolist(), n_split))
                 words.append(phrase)
         
         return words, words_positions
+    def _filter_pos(self, pos, candidates_info):
+        info = []
+        pos = np.array(pos)
+        
+        for word, (positions, n_gram) in candidates_info:
+            
+            position_list = [[ i + j for j in range(n_gram)] for i in positions]
+            
+            word_pos = []
+            for gram_position in position_list:
+                word_pos.append(' '.join(pos[gram_position]))
+            
+            gram_name = 'gram_' + str(n_gram)
+            word_pos = list(set(word_pos))
+            
+            if self.pos_pattern_dict and (gram_name in self.pos_pattern_dict.keys()):
+                if len(word_pos) == 1:
+                    if word_pos[0] in self.pos_pattern_dict[gram_name]:
+                        info.append((word, (positions, n_gram, word_pos[0])))
+                else:
+                    if any([p in  self.pos_pattern_dict[gram_name] for p in word_pos]):
+                        info.append((word, (positions, n_gram, word_pos)))
+            else:
+                if len(word_pos) == 1:
+                    info.append((word, (positions, n_gram, word_pos[0])))
+                else:
+                    info.append((word, (positions, n_gram, word_pos)))
 
-    def extract_candidates(self, ws):
+        return info
+
+    def extract_candidates(self, ws, pos):
 
         sentences = self._segment_process(ws)
 
@@ -78,14 +118,19 @@ class Keyword_Candidates(object):
         
         candidates, candidates_positions = self._get_candidates_positions(ws, candidates)
 
-        return list(zip(candidates, candidates_positions))
+        candidates_info = list(zip(candidates, candidates_positions))
+
+        if pos is not None:
+            candidates_info = self._filter_pos(pos, candidates_info)
+
+        return candidates_info
 
 if __name__ == '__main__':
     import os 
     os.chdir('c:\\Users\\cloudy822\\Desktop\\wordExtractor')
 
     from utils import read_dictionary 
-    from tokenization import Ckip_Transformers_Tokenizer
+    from preprocess.tokenization import Ckip_Transformers_Tokenizer
     
     stop_words = read_dictionary('./dict/stop_words.txt')
     
@@ -98,14 +143,16 @@ if __name__ == '__main__':
     這就要求學習算法以“合理”的方式將訓練數據推廣到看不見的情況（見歸納偏差）。
     """
 
-    tokenizer = Ckip_Transformers_Tokenizer('./model_files/ckip_albert-tiny-chinese-ws/' ,use_device = 'cuda')
-    ws = tokenizer.tokenize(doc)[0]
+    tokenizer = Ckip_Transformers_Tokenizer(ws_model_path = './model_files/ckip_albert-tiny-chinese-ws/' ,
+                                            pos_model_path = './model_files/ckip_bert-base-chinese_pos/', use_device = 'cuda')
+    ws,pos = tokenizer.tokenize(doc)
 
     KC = Keyword_Candidates(stop_words = stop_words,
                             keyphrase_ngram_range = (1, 5),
                             segment_by_stop_words = True,
                             excluding_stop_words = True,
-                            min_df = 2)
+                            min_df = 2,
+                            pos_pattern = [(2, ['Na Na'])])
 
-    candidates = KC.extract_candidates(ws)
+    candidates = KC.extract_candidates(ws, pos)
     

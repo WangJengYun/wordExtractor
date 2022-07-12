@@ -6,7 +6,8 @@ class KeyWordExtractor:
     def __init__(self, 
         embedding_model, 
         tokenizer_model,
-        backend,
+        pos_model = None,
+        backend = 'flair',
         stop_words = None,
         device = 'cuda'
         ):
@@ -15,6 +16,7 @@ class KeyWordExtractor:
         self.device = device
         
         self.tokenizer = Ckip_Transformers_Tokenizer(tokenizer_model,\
+                                                     pos_model_path = pos_model,
                                                      use_device = self.device)
         
         self.model = select_backend(embedding_model, backend)
@@ -28,7 +30,9 @@ class KeyWordExtractor:
         excluding_stop_words = True,
         similarity_method = 'basic',
         top_n = 5,
-        min_df = 1
+        min_df = 1,
+        pos_pattern = None, 
+        excluding_same_word = False
         ):
         if isinstance(docs, str):
             keywords = self._extract_keywords_single_doc(
@@ -39,7 +43,9 @@ class KeyWordExtractor:
                 excluding_stop_words = excluding_stop_words,
                 similarity_method = similarity_method, 
                 top_n = top_n,
-                min_df = min_df)
+                min_df = min_df,
+                pos_pattern = pos_pattern,
+                excluding_same_word = excluding_same_word)
             
             return keywords
              
@@ -52,10 +58,12 @@ class KeyWordExtractor:
         excluding_stop_words,
         similarity_method,
         top_n,
-        min_df
+        min_df,
+        pos_pattern,
+        excluding_same_word
         ):
 
-        ws = self.tokenizer.tokenize(doc)[0]
+        ws,pos = self.tokenizer.tokenize(doc)
 
         # Extract Candidates
         candidates = Keyword_Candidates(
@@ -63,19 +71,23 @@ class KeyWordExtractor:
                     keyphrase_ngram_range = keyphrase_ngram_range,
                     segment_by_stop_words = segment_by_stop_words,
                     excluding_stop_words = excluding_stop_words,
-                    min_df = min_df 
-        ).extract_candidates(ws)
+                    min_df = min_df,
+                    pos_pattern = pos_pattern
+        ).extract_candidates(ws, pos)
         
+
         # Extact Embedding 
-        doc_embedding = self.model.doc_embed([ws])
+        doc_embedding = self.model.doc_embed([' '.join(ws)])
         word_embeddings = self.model.word_embed(candidates, ws)
 
         # Calculate distances and extract keywords
         keywords = select_similarity(doc_embedding  = doc_embedding, 
                                      word_embeddings = word_embeddings, 
                                      candidates = candidates, 
+                                     method = similarity_method,
                                      top_n = top_n,
-                                     method = similarity_method)
+                                     excluding_same_word = excluding_same_word)
+
         return keywords
 
 if __name__ == '__main__':

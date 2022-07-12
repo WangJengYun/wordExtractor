@@ -1,24 +1,24 @@
 import torch
+import numpy as np 
 from utils import read_dictionary 
 from abc import ABC, abstractmethod
-from ckip_transformers.nlp import CkipWordSegmenter
+from ckip_transformers.nlp import CkipWordSegmenter, CkipPosTagger
 
 class Tokenizer(ABC):
     @abstractmethod
     def tokenize(self, texts):
         raise NotImplementedError
 
-    def excluding_stop_words(self, texts):
-        stop_words = read_dictionary('./dict/stop_words.txt')
+    def excluding_stop_words(self, texts, stop_words):
 
-        text_without_stop_words = []
+        text_index_without_stop_words = []
         for idx, text in enumerate(texts):
-            text_without_stop_words.append([ s for s in text if s.strip() not in stop_words])
+            text_index_without_stop_words.append([ idx for idx, s in enumerate(text) if s.strip() not in stop_words])
 
-        return text_without_stop_words     
+        return text_index_without_stop_words     
 
 class Ckip_Transformers_Tokenizer(Tokenizer):
-    def __init__(self, model_path, use_device):
+    def __init__(self, ws_model_path, pos_model_path = None, use_device = 'cuda'):
         
         if use_device == 'cuda':
             if torch.cuda.is_available():
@@ -28,24 +28,40 @@ class Ckip_Transformers_Tokenizer(Tokenizer):
         else:
             self.device = -1
         
-        self.ws_model = CkipWordSegmenter(model_name = model_path,
+        self.ws_model = CkipWordSegmenter(model_name = ws_model_path,
                                           level = 3, device = self.device)
+        if pos_model_path is not None:
+            self.pos_model = CkipPosTagger(model_name = pos_model_path,
+                                          level = 3, device = self.device)
+        else:
+            self.pos_model = None 
 
-    def tokenize(self, texts, stop_words = False):
+    def tokenize(self, texts, stop_words = None):
+        ws_result, pos_result = None, None 
+
         if isinstance(texts, str):
             texts = [texts]
+            ws = self.ws_model(texts)[0]
+            if stop_words is not None:
+                ws_index = self.excluding_stop_words([ws], stop_words)[0]
+                ws_result = np.array([ws])[0][ws_index].tolist()
+            else:
+                ws_result = ws 
+            
+            if self.pos_model is not None:
+                pos = self.pos_model([ws])[0]
+                if stop_words is not None:
+                    pos_result = np.array([pos])[0][ws_index].tolist()
+                else:
+                    pos_result = pos 
+  
         elif isinstance(texts, list):
             pass 
         else:
             raise ValueError(
                 f"Expect text type (str or List[str]) but got {type(texts)}"
-            )   
-        ws_result = self.ws_model(texts)
-        
-        if stop_words:
-            ws_result = self.excluding_stop_words(ws_result)
-        
-        return ws_result
+            )           
+        return ws_result, pos_result
 
 if __name__ == '__main__':
     text = """
@@ -56,5 +72,8 @@ if __name__ == '__main__':
         最佳方案將使演算法能夠正確確定未見實例的類標籤。
         這就要求學習算法以“合理”的方式將訓練數據推廣到看不見的情況（見歸納偏差）。
     """
-    WS = Ckip_Transformers_Tokenizer('./model_files/ckip_bert-base-chinese_ws/', use_device = 'cuda')
-    result = WS.tokenize(text, stop_words=True)
+    WS = Ckip_Transformers_Tokenizer(ws_model_path = './model_files/ckip_bert-base-chinese_ws/',
+                                     pos_model_path = './model_files/ckip_bert-base-chinese_pos/', use_device = 'cpu')
+    result = WS.tokenize(text, stop_words = None)
+    # result = WS.tokenize(text, stop_words = read_dictionary('./dict/stop_words.txt'))
+
