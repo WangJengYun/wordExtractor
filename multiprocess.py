@@ -1,7 +1,9 @@
 import re
+import time 
 from tqdm import  tqdm
 from utils import read_dictionary 
 from backend import select_backend
+from functools import partial
 from similarity_algorithm import select_similarity
 from preprocess import Ckip_Transformers_Tokenizer, Keyword_Candidates
 from multiprocessing import Manager, Pool
@@ -18,12 +20,10 @@ def keywords_extraction(idx, ws, candidates, model, M):
                                  candidates = candidates, 
                                  top_n = 10,
                                  method = 'basic',
-                                 show_info = False)
+                                 excluding_same_word = True)
     
     M.append((idx, keywords))
 
-def test(idx,M):
-    M['idx' + str(idx)] = idx
 
 if __name__ == '__main__':
 
@@ -52,7 +52,8 @@ if __name__ == '__main__':
                         segment_by_stop_words = True,
                         excluding_stop_words = True,
                         min_df = 2,
-                        pos_pattern = None
+                        pos_pattern = None,
+                        including_pos_pattern = False
             ).extract_candidates(ws, pos)
         
         ws_list.append(ws)
@@ -64,17 +65,24 @@ if __name__ == '__main__':
         A = []
         keywords_extraction(idx, ws, candidates, model, A)
     
-    pool = Pool(5)   
+    start_time = time.time()
+    
+    pool = Pool(6)   
     M = Manager().list() 
     pbar = tqdm(total = len(ws_list))
     update = lambda *args:pbar.update()
     for idx, (ws, candidates) in enumerate(list(zip(ws_list,candidates_list))):
-        pool.apply_async(keywords_extraction, args = (idx, ws, candidates, model, M), callback=update)
+        # pool.apply(keywords_extraction, args = (idx, ws, candidates, model, M), callback=update)
+        pool.apply(keywords_extraction, args = (idx, ws, candidates, model, M))
+    # inputs = list(zip(range(len(ws_list)),ws_list,candidates_list))
+    # # pool.starmap_async(partial(keywords_extraction, model = model, M = M), tqdm(inputs, total = len(ws_list)))        
+    # pool.starmap(partial(keywords_extraction, model = model, M = M), tqdm(inputs, total = len(ws_list)))        
     
     pool.close()
     pool.join()
     
-    print(M)
+    end_time = time.time()
+    print(end_time - start_time)
 
             
         

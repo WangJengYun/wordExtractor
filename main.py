@@ -17,6 +17,7 @@ doc = """
    
 kw_model = KeyWordExtractor(embedding_model = './model_files/ckip_bert-base-chinese', 
                             tokenizer_model ='./model_files/ckip_bert-base-chinese_ws/',
+                            pos_model ='./model_files/ckip_bert-base-chinese_pos/',
                             backend = 'flair',
                             stop_words = stop_words,
                             device = 'cuda')
@@ -26,7 +27,10 @@ keywords = kw_model.extract_keywords(doc,
                                     segment_by_stop_words = True,
                                     min_df = 2,
                                     similarity_method = 'basic',
-                                    top_n = 10)
+                                    top_n = 10,
+                                    pos_pattern = None,
+                                    including_pos_pattern = True,
+                                    excluding_same_word = True)
 
 
 doc = """
@@ -54,10 +58,11 @@ kw_model = KeyWordExtractor(embedding_model = './model_files/ckip_bert-base-chin
 keywords = kw_model.extract_keywords(doc, 
                                     keyphrase_ngram_range = (1, 10),
                                     segment_by_stop_words = True,
-                                    min_df = 2,
+                                    min_df = 3,
                                     similarity_method = 'basic',
                                     top_n = 10,
                                     pos_pattern = None,
+                                    including_pos_pattern = True,
                                     excluding_same_word = False)
 
 
@@ -79,11 +84,12 @@ kw_model = KeyWordExtractor(embedding_model = './model_files/ckip_bert-base-chin
 keywords = kw_model.extract_keywords(doc, 
                                     keyphrase_ngram_range = (1, 10),
                                     segment_by_stop_words = True,
-                                    min_df = 4,
+                                    min_df = 3,
                                     similarity_method = 'basic',
                                     top_n = 20,
-                                    pos_pattern = [(1, ['VC','FW'])],
-                                    excluding_same_word = True)
+                                    pos_pattern = [(2,['Nb VE'])],
+                                    including_pos_pattern = False,
+                                    excluding_same_word = False)
 
 doc = """
     台積電股價跌跌不休　楠梓設廠卻帶動房價連漲11個月
@@ -104,7 +110,7 @@ kw_model = KeyWordExtractor(embedding_model = './model_files/ckip_bert-base-chin
 keywords = kw_model.extract_keywords(doc, 
                                     keyphrase_ngram_range = (1, 10),
                                     segment_by_stop_words = True,
-                                    min_df = 2,
+                                    min_df = 3,
                                     similarity_method = 'basic',
                                     top_n = 20,
                                     pos_pattern = None,

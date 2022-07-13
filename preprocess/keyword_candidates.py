@@ -11,7 +11,8 @@ class Keyword_Candidates(object):
         segment_by_stop_words,
         excluding_stop_words,
         min_df,
-        pos_pattern):
+        pos_pattern,
+        including_pos_pattern):
         
         self.stop_words = stop_words
         self.keyphrase_ngram_range = keyphrase_ngram_range
@@ -19,6 +20,7 @@ class Keyword_Candidates(object):
         self.excluding_stop_words = excluding_stop_words
         self.min_df = min_df
         self.pos_pattern = pos_pattern
+        self.including_pos_pattern = including_pos_pattern
 
         if self.segment_by_stop_words or self.excluding_stop_words:
             assert stop_words is not None
@@ -97,11 +99,19 @@ class Keyword_Candidates(object):
             
             if self.pos_pattern_dict and (gram_name in self.pos_pattern_dict.keys()):
                 if len(word_pos) == 1:
-                    if word_pos[0] in self.pos_pattern_dict[gram_name]:
-                        info.append((word, (positions, n_gram, word_pos[0])))
+                    if self.including_pos_pattern:
+                        if word_pos[0] in self.pos_pattern_dict[gram_name]:
+                            info.append((word, (positions, n_gram, word_pos[0])))
+                    else:
+                        if word_pos[0] not in self.pos_pattern_dict[gram_name]:
+                            info.append((word, (positions, n_gram, word_pos[0])))
                 else:
-                    if any([p in  self.pos_pattern_dict[gram_name] for p in word_pos]):
-                        info.append((word, (positions, n_gram, word_pos)))
+                    if self.including_pos_pattern:
+                        if any([p in  self.pos_pattern_dict[gram_name] for p in word_pos]):
+                            info.append((word, (positions, n_gram, word_pos)))
+                    else:   
+                        if any([p in  self.pos_pattern_dict[gram_name] for p in word_pos]):
+                            info.append((word, (positions, n_gram, word_pos))) 
             else:
                 if len(word_pos) == 1:
                     info.append((word, (positions, n_gram, word_pos[0])))

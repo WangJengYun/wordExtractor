@@ -32,6 +32,7 @@ class KeyWordExtractor:
         top_n = 5,
         min_df = 1,
         pos_pattern = None, 
+        including_pos_pattern = False,
         excluding_same_word = False
         ):
         if isinstance(docs, str):
@@ -45,7 +46,8 @@ class KeyWordExtractor:
                 top_n = top_n,
                 min_df = min_df,
                 pos_pattern = pos_pattern,
-                excluding_same_word = excluding_same_word)
+                including_pos_pattern = including_pos_pattern,
+                excluding_same_word = excluding_same_word )
             
             return keywords
              
@@ -60,6 +62,7 @@ class KeyWordExtractor:
         top_n,
         min_df,
         pos_pattern,
+        including_pos_pattern,
         excluding_same_word
         ):
 
@@ -72,7 +75,8 @@ class KeyWordExtractor:
                     segment_by_stop_words = segment_by_stop_words,
                     excluding_stop_words = excluding_stop_words,
                     min_df = min_df,
-                    pos_pattern = pos_pattern
+                    pos_pattern = pos_pattern,
+                    including_pos_pattern = including_pos_pattern
         ).extract_candidates(ws, pos)
         
 
