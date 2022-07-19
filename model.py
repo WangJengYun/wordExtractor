@@ -33,7 +33,8 @@ class KeyWordExtractor:
         min_df = 1,
         pos_pattern = None, 
         including_pos_pattern = False,
-        excluding_same_word = False
+        excluding_same_word = False,
+        excluding_specific_words = None
         ):
         if isinstance(docs, str):
             keywords = self._extract_keywords_single_doc(
@@ -47,7 +48,8 @@ class KeyWordExtractor:
                 min_df = min_df,
                 pos_pattern = pos_pattern,
                 including_pos_pattern = including_pos_pattern,
-                excluding_same_word = excluding_same_word )
+                excluding_same_word = excluding_same_word,
+                excluding_specific_words = excluding_specific_words)
             
             return keywords
              
@@ -63,7 +65,8 @@ class KeyWordExtractor:
         min_df,
         pos_pattern,
         including_pos_pattern,
-        excluding_same_word
+        excluding_same_word,
+        excluding_specific_words
         ):
 
         ws,pos = self.tokenizer.tokenize(doc)
@@ -76,7 +79,8 @@ class KeyWordExtractor:
                     excluding_stop_words = excluding_stop_words,
                     min_df = min_df,
                     pos_pattern = pos_pattern,
-                    including_pos_pattern = including_pos_pattern
+                    including_pos_pattern = including_pos_pattern,
+                    excluding_specific_words = excluding_specific_words
         ).extract_candidates(ws, pos)
         
 

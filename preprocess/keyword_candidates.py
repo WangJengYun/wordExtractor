@@ -12,7 +12,8 @@ class Keyword_Candidates(object):
         excluding_stop_words,
         min_df,
         pos_pattern,
-        including_pos_pattern):
+        including_pos_pattern,
+        excluding_specific_words):
         
         self.stop_words = stop_words
         self.keyphrase_ngram_range = keyphrase_ngram_range
@@ -21,6 +22,7 @@ class Keyword_Candidates(object):
         self.min_df = min_df
         self.pos_pattern = pos_pattern
         self.including_pos_pattern = including_pos_pattern
+        self.excluding_specific_words = excluding_specific_words
 
         if self.segment_by_stop_words or self.excluding_stop_words:
             assert stop_words is not None
@@ -82,6 +84,7 @@ class Keyword_Candidates(object):
                 words.append(phrase)
         
         return words, words_positions
+    
     def _filter_pos(self, pos, candidates_info):
         info = []
         pos = np.array(pos)
@@ -120,11 +123,25 @@ class Keyword_Candidates(object):
 
         return info
 
+    def _excluding_words(self, candidates):
+        
+        filter_candidates = []
+        for idx, candidate in enumerate(candidates):
+            word = candidate.replace(' ','')
+            
+            if word not in self.excluding_specific_words:
+                filter_candidates.append(candidate)
+
+        return filter_candidates                
+
     def extract_candidates(self, ws, pos):
 
         sentences = self._segment_process(ws)
 
         candidates = self._get_candidates(sentences)
+
+        if self.excluding_specific_words is not None :
+            candidates = self._excluding_words(candidates)
         
         candidates, candidates_positions = self._get_candidates_positions(ws, candidates)
 
